@@ -29,14 +29,17 @@ class ArsipController extends Controller
      * @param \App\Models\Kegiatan $kegiatan
      * @return \Inertia\Response
         */
-    public function show(Kegiatan $kegiatan)
+public function show(Kegiatan $kegiatan)
     {
         $kegiatan->load([
             'proposal.pengusul',
             'tim.users',
             'createdBy',
-            'dokumentasi' => function ($query) { // BENAR
-                $query->with(['fotos', 'kontraks', 'kebutuhans']);
+            // PERBAIKAN: Muat 'kontrak' langsung dari 'kegiatan'
+            'kontrak', 
+            'dokumentasi' => function ($query) {
+                // Hapus 'kontraks' dari sini karena sudah tidak relevan
+                $query->with(['fotos', 'kebutuhans']);
             },
             'beritaAcara'
         ]);

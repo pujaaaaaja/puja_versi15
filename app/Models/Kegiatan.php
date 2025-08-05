@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
+
 class Kegiatan extends Model
 {
     use HasFactory;
@@ -51,5 +52,7 @@ class Kegiatan extends Model
     public function kontrak(): HasOne
     {
         return $this->hasOne(Kontrak::class, 'kegiatan_id');
+        
     }
+    
 }

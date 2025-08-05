@@ -33,10 +33,10 @@ class DokumentasiKegiatan extends Model
      * Mendefinisikan relasi "hasMany" ke model Kontrak.
      * Setiap entri dokumentasi dapat memiliki banyak kontrak.
      */
-    public function kontraks()
-    {
-        return $this->hasMany(Kontrak::class);
-    }
+    // public function kontraks()
+    // {
+    //     return $this->hasMany(Kontrak::class);
+    // }
 
     /**
      * Mendefinisikan relasi "hasMany" ke model Kebutuhan.
