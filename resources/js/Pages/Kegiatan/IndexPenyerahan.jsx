@@ -1,55 +1,122 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link } from '@inertiajs/react';
-import Modal from '@/Components/Modal';
+import { Head, useForm } from '@inertiajs/react';
+import Swal from 'sweetalert2';
+import Dialog from '@/Components/Dialog';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
-import InputLabel from '@/Components/InputLabel';
-import TextInput from '@/Components/TextInput';
 import InputError from '@/Components/InputError';
+import TextInput from '@/Components/TextInput';
+import Pagination from '@/Components/Pagination';
 
-export default function IndexPenyerahan({ auth, kegiatans }) {
-    const [showModal, setShowModal] = useState(false);
-    const [currentKegiatan, setCurrentKegiatan] = useState(null);
-    const { data, setData, patch, processing, errors, reset } = useForm({
+// Komponen terpisah untuk setiap baris agar state tidak tercampur
+const KegiatanRow = ({ kegiatan }) => {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Nama field disesuaikan dengan validasi di backend ('file_sktl')
+    const { data, setData, post, processing, errors, reset } = useForm({
         tanggal_penyerahan: '',
-        sktl_penyerahan_path: null,
+        file_sktl: null,
     });
 
-    const openModal = (kegiatan) => {
-        setCurrentKegiatan(kegiatan);
-        setShowModal(true);
-    };
-
+    const openModal = () => setIsModalOpen(true);
     const closeModal = () => {
-        setShowModal(false);
-        setCurrentKegiatan(null);
+        setIsModalOpen(false);
         reset();
     };
 
-    const onSubmit = (e) => {
+    // Menyederhanakan proses submit, serahkan pada useForm
+    const handleSubmit = (e) => {
         e.preventDefault();
-        // Karena kita mengunggah file, kita harus menggunakan metode POST
-        // dan menyertakan _method: 'PATCH' untuk Laravel.
-        // Namun, karena rute kita sudah 'patch', Inertia akan menanganinya dengan benar.
-        // Pastikan untuk menggunakan `post` dari `useForm` saat ada file.
-        const form = new FormData();
-        form.append('tanggal_penyerahan', data.tanggal_penyerahan);
-        form.append('sktl_penyerahan_path', data.sktl_penyerahan_path);
-        form.append('_method', 'PATCH'); // Spoofing method for file uploads
-
-        // Gunakan Inertia.post untuk mengirim FormData
-        router.post(route('manajemen.penyerahan.update', currentKegiatan.id), form, {
-             onSuccess: () => closeModal(),
+        // Cukup panggil `post`. Inertia akan menangani file dan method spoofing.
+        post(route('manajemen.penyerahan.update', kegiatan.id), {
+            // Ini adalah bagian kuncinya:
+            _method: 'patch',
+            forceFormData: true, 
+            
+            onSuccess: () => {
+                closeModal();
+                Swal.fire('Berhasil!', 'Kegiatan telah dilanjutkan ke tahap penyerahan.', 'success');
+            },
+            onError: (err) => {
+                const errorMessages = Object.values(err).join('\n');
+                Swal.fire('Gagal!', `Terjadi kesalahan. \n\n${errorMessages}`, 'error');
+            },
         });
     };
 
-    // Jika menggunakan `patch` tanpa file, kodenya akan seperti ini:
-    // patch(route('manajemen.penyerahan.update', currentKegiatan.id), {
-    //     onSuccess: () => closeModal(),
-    // });
-    // Karena ada file, kita akan gunakan pendekatan FormData dengan router.post
+    return (
+        <>
+            <tr className="bg-white border-b hover:bg-gray-50">
+                <td className="px-6 py-4 font-medium text-gray-900">{kegiatan.nama_kegiatan}</td>
+                <td className="px-6 py-4">{kegiatan.tim?.nama_tim || 'Belum ada tim'}</td>
+                <td className="px-6 py-4">{kegiatan.tanggal_kegiatan}</td>
+                <td className="px-6 py-4 text-right">
+                    <button
+                        onClick={openModal}
+                        className="font-medium text-blue-600 hover:underline"
+                    >
+                        Proses Penyerahan
+                    </button>
+                </td>
+            </tr>
 
+            <Dialog show={isModalOpen} onClose={closeModal}>
+                <form onSubmit={handleSubmit} className="p-6">
+                    <h2 className="text-lg font-medium text-gray-900">
+                        Proses Penyerahan untuk "{kegiatan.nama_kegiatan}"
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-600">
+                        Unggah SKTL Penyerahan untuk melanjutkan kegiatan.
+                    </p>
+
+                    <div className="mt-6">
+                        <label htmlFor="tanggal_penyerahan" className="block text-sm font-medium text-gray-700">
+                            Tanggal Penyerahan
+                        </label>
+                        <TextInput
+                            id="tanggal_penyerahan"
+                            type="date"
+                            name="tanggal_penyerahan"
+                            value={data.tanggal_penyerahan}
+                            className="mt-1 block w-full"
+                            onChange={(e) => setData('tanggal_penyerahan', e.target.value)}
+                            required
+                        />
+                        <InputError message={errors.tanggal_penyerahan} className="mt-2" />
+                    </div>
+
+                    <div className="mt-4">
+                        <label htmlFor="file_sktl" className="block text-sm font-medium text-gray-700">
+                            File SKTL Penyerahan (PDF, JPG, PNG)
+                        </label>
+                        <input
+                            id="file_sktl"
+                            type="file"
+                            name="file_sktl"
+                            className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                            onChange={(e) => setData('file_sktl', e.target.files[0])}
+                            required
+                        />
+                        <InputError message={errors.file_sktl} className="mt-2" />
+                    </div>
+
+                    <div className="mt-6 flex justify-end">
+                        <SecondaryButton type="button" onClick={closeModal}>
+                            Batal
+                        </SecondaryButton>
+                        <PrimaryButton className="ms-3" disabled={processing}>
+                            {processing ? 'Memproses...' : 'Lanjutkan Tahap'}
+                        </PrimaryButton>
+                    </div>
+                </form>
+            </Dialog>
+        </>
+    );
+};
+
+
+export default function IndexPenyerahan({ auth, kegiatans, success }) {
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -64,30 +131,23 @@ export default function IndexPenyerahan({ auth, kegiatans }) {
                             <p className="mb-4 text-gray-600">
                                 Daftar kegiatan yang telah menyelesaikan tahap observasi dan siap untuk dilanjutkan ke tahap penyerahan.
                             </p>
-                            <div className="overflow-auto">
+                            
+                            <div className="relative overflow-x-auto">
                                 <table className="w-full text-sm text-left text-gray-500">
                                     <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                                         <tr>
-                                            <th className="px-6 py-3">Nama Kegiatan</th>
-                                            <th className="px-6 py-3">Tim Pelaksana</th>
-                                            <th className="px-6 py-3">Tanggal Kegiatan</th>
-                                            <th className="px-6 py-3 text-right">Aksi</th>
+                                            <th scope="col" className="px-6 py-3">Nama Kegiatan</th>
+                                            <th scope="col" className="px-6 py-3">Tim Pelaksana</th>
+                                            <th scope="col" className="px-6 py-3">Tanggal Kegiatan</th>
+                                            <th scope="col" className="px-6 py-3 text-right">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {kegiatans.data.map((kegiatan) => (
-                                            <tr key={kegiatan.id} className="bg-white border-b">
-                                                <td className="px-6 py-4 font-medium">{kegiatan.nama_kegiatan}</td>
-                                                <td className="px-6 py-4">{kegiatan.tim.nama_tim}</td>
-                                                <td className="px-6 py-4">{kegiatan.tanggal_kegiatan}</td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <PrimaryButton onClick={() => openModal(kegiatan)}>
-                                                        Proses Penyerahan
-                                                    </PrimaryButton>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                        {kegiatans.data.length === 0 && (
+                                        {kegiatans.data.length > 0 ? (
+                                            kegiatans.data.map(kegiatan => (
+                                                <KegiatanRow key={kegiatan.id} kegiatan={kegiatan} />
+                                            ))
+                                        ) : (
                                             <tr>
                                                 <td colSpan="4" className="px-6 py-4 text-center">
                                                     Tidak ada kegiatan yang perlu diproses saat ini.
@@ -97,50 +157,11 @@ export default function IndexPenyerahan({ auth, kegiatans }) {
                                     </tbody>
                                 </table>
                             </div>
+                            <Pagination className="mt-6" links={kegiatans.meta.links} />
                         </div>
                     </div>
                 </div>
             </div>
-
-            <Modal show={showModal} onClose={closeModal}>
-                <form onSubmit={onSubmit} className="p-6">
-                    <h2 className="text-lg font-medium text-gray-900">
-                        Proses Penyerahan untuk "{currentKegiatan?.nama_kegiatan}"
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-600">
-                        Unggah SKTL Penyerahan untuk melanjutkan kegiatan ke tahap berikutnya.
-                    </p>
-                    <div className="mt-6">
-                        <InputLabel htmlFor="tanggal_penyerahan" value="Tanggal Penyerahan" />
-                        <TextInput
-                            id="tanggal_penyerahan"
-                            type="date"
-                            className="mt-1 block w-full"
-                            value={data.tanggal_penyerahan}
-                            onChange={(e) => setData('tanggal_penyerahan', e.target.value)}
-                            required
-                        />
-                        <InputError message={errors.tanggal_penyerahan} className="mt-2" />
-                    </div>
-                    <div className="mt-4">
-                        <InputLabel htmlFor="sktl_penyerahan_path" value="File SKTL Penyerahan" />
-                        <TextInput
-                            id="sktl_penyerahan_path"
-                            type="file"
-                            className="mt-1 block w-full"
-                            onChange={(e) => setData('sktl_penyerahan_path', e.target.files[0])}
-                            required
-                        />
-                        <InputError message={errors.sktl_penyerahan_path} className="mt-2" />
-                    </div>
-                    <div className="mt-6 flex justify-end">
-                        <SecondaryButton onClick={closeModal}>Batal</SecondaryButton>
-                        <PrimaryButton className="ms-3" disabled={processing}>
-                            Lanjutkan Tahap
-                        </PrimaryButton>
-                    </div>
-                </form>
-            </Modal>
         </AuthenticatedLayout>
     );
 }

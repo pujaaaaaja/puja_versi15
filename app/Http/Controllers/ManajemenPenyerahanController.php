@@ -3,67 +3,56 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TahapanKegiatan;
-use App\Models\Kegiatan;
 use App\Http\Resources\KegiatanResource;
+use App\Models\Kegiatan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Inertia\Inertia;
 
 class ManajemenPenyerahanController extends Controller
 {
     /**
-     * Menampilkan daftar kegiatan yang siap untuk tahap penyerahan.
-     * Aksi untuk Kabid.
+     * Menampilkan daftar kegiatan yang menunggu proses penyerahan oleh Kabid.
      */
     public function index()
     {
-        $this->authorize('create', Kegiatan::class); // Menggunakan hak akses Kabid
+        // Ambil semua kegiatan yang statusnya MENUNGGU_PROSES_KABID
+        $kegiatans = Kegiatan::query()
+            ->where('tahapan', TahapanKegiatan::MENUNGGU_PROSES_KABID)
+            ->with('tim.users', 'proposal') // Eager load relasi untuk efisiensi
+            ->orderBy('tanggal_kegiatan', 'desc')
+            ->paginate(10);
 
-        $query = Kegiatan::query()
-            ->where('tahapan', TahapanKegiatan::DOKUMENTASI_OBSERVASI)
-            ->with(['proposal', 'tim']);
-        
-        $kegiatans = $query->paginate(10);
-
-        return Inertia::render('Kegiatan/IndexPenyerahan', [
+        return inertia('Kegiatan/IndexPenyerahan', [
             'kegiatans' => KegiatanResource::collection($kegiatans),
-            'success' => session('success'),
         ]);
     }
 
     /**
-     * Memperbarui kegiatan dengan SKTL Penyerahan dan melanjutkan ke tahap berikutnya.
-     * Aksi untuk Kabid.
+     * Memproses penyerahan oleh Kabid dan melanjutkan tahapan kegiatan.
      */
     public function update(Request $request, Kegiatan $kegiatan)
     {
-        $this->authorize('create', Kegiatan::class); // Menggunakan hak akses Kabid
-
-        // Pastikan kegiatan berada di tahap yang benar
-        if ($kegiatan->tahapan !== TahapanKegiatan::DOKUMENTASI_OBSERVASI) {
-            return back()->with('error', 'Kegiatan ini belum menyelesaikan tahap observasi.');
-        }
-
-        $data = $request->validate([
+        $validated = $request->validate([
             'tanggal_penyerahan' => 'required|date',
-            'sktl_penyerahan_path' => 'required|file|mimes:pdf,doc,docx|max:2048',
+            'file_sktl' => 'required|file|mimes:pdf,jpg,jpeg,png|max:2048',
         ]);
 
-        if ($request->hasFile('sktl_penyerahan_path')) {
-            if ($kegiatan->sktl_penyerahan_path) {
-                Storage::disk('public')->delete($kegiatan->sktl_penyerahan_path);
-            }
-            $data['sktl_penyerahan_path'] = $request->file('sktl_penyerahan_path')->store('penyerahan_sktl', 'public');
+        // Hapus file SKTL lama jika ada untuk menghindari penumpukan file
+        if ($kegiatan->file_sktl && Storage::disk('public')->exists($kegiatan->file_sktl)) {
+            Storage::disk('public')->delete($kegiatan->file_sktl);
         }
 
+        // Simpan file SKTL yang baru diunggah
+        $filePath = $request->file('file_sktl')->store('sktl', 'public');
+
+        // Update data pada tabel kegiatan
         $kegiatan->update([
-            'tanggal_penyerahan' => $data['tanggal_penyerahan'],
-            'sktl_penyerahan_path' => $data['sktl_penyerahan_path'],
-            'tahapan' => TahapanKegiatan::DOKUMENTASI_PENYERAHAN, // Lanjut ke tahap penyerahan oleh pegawai
+            'tanggal_penyerahan' => $validated['tanggal_penyerahan'],
+            'file_sktl' => $filePath,
+            'tahapan' => TahapanKegiatan::DOKUMENTASI_PENYERAHAN, // Lanjutkan ke tahapan berikutnya
         ]);
 
-        // TODO: Kirim notifikasi ke tim bahwa SKTL penyerahan sudah terbit
-
-        return to_route('manajemen.penyerahan.index')->with('success', 'SKTL Penyerahan berhasil diunggah. Kegiatan dilanjutkan ke tahap penyerahan.');
+        return redirect()->route('manajemen.penyerahan.index')
+            ->with('success', 'Kegiatan berhasil diproses dan dilanjutkan ke tahap penyerahan.');
     }
 }
