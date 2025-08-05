@@ -13,10 +13,12 @@ import Pagination from '@/Components/Pagination';
 const KegiatanRow = ({ kegiatan }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // Nama field disesuaikan dengan validasi di backend ('file_sktl')
+    // --- PERUBAHAN 1: Gunakan `post` dan tambahkan `_method: 'patch'` ---
+    // Kita akan mengirim sebagai POST, tapi memberitahu Laravel ini adalah PATCH.
     const { data, setData, post, processing, errors, reset } = useForm({
         tanggal_penyerahan: '',
         file_sktl: null,
+        _method: 'patch', // Memberitahu Laravel untuk memperlakukan ini sebagai request PATCH
     });
 
     const openModal = () => setIsModalOpen(true);
@@ -25,15 +27,12 @@ const KegiatanRow = ({ kegiatan }) => {
         reset();
     };
 
-    // Menyederhanakan proses submit, serahkan pada useForm
+    // --- PERUBAHAN 2: Panggil `post` saat submit ---
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Cukup panggil `post`. Inertia akan menangani file dan method spoofing.
+        // Mengirim sebagai POST. Inertia akan otomatis membuat FormData karena ada file.
+        // Field `_method: 'patch'` yang kita set di atas akan disertakan.
         post(route('manajemen.penyerahan.update', kegiatan.id), {
-            // Ini adalah bagian kuncinya:
-            _method: 'patch',
-            forceFormData: true, 
-            
             onSuccess: () => {
                 closeModal();
                 Swal.fire('Berhasil!', 'Kegiatan telah dilanjutkan ke tahap penyerahan.', 'success');
@@ -42,6 +41,7 @@ const KegiatanRow = ({ kegiatan }) => {
                 const errorMessages = Object.values(err).join('\n');
                 Swal.fire('Gagal!', `Terjadi kesalahan. \n\n${errorMessages}`, 'error');
             },
+            preserveScroll: true,
         });
     };
 
