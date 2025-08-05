@@ -1,17 +1,20 @@
-// resources/js/Pages/Pegawai/Partials/PenyelesaianView.jsx
-
-import { useForm, Link, router } from '@inertiajs/react'; // <-- Tambahkan 'router'
+import React from 'react';
+import { useForm, Link, router } from '@inertiajs/react';
 import Swal from 'sweetalert2';
 
+// Sub-komponen untuk setiap baris kegiatan
 const PenyelesaianRow = ({ kegiatan }) => {
+    // Form untuk mengunggah Berita Acara
     const { data: baData, setData: setBaData, post: postBa, processing: processingBa, errors: baErrors, reset: resetBa } = useForm({
         file_berita_acara: null,
     });
 
+    // Form untuk memperbarui status akhir
     const { data: statusData, setData: setStatusData, patch: patchStatus, processing: processingStatus, errors: statusErrors } = useForm({
         status_akhir: kegiatan.status_akhir || 'Selesai',
     });
 
+    // Menangani pengiriman form untuk Berita Acara
     function handleBeritaAcaraSubmit(e) {
         e.preventDefault();
         postBa(route('pegawai.kegiatan.storeBeritaAcara', kegiatan.id), {
@@ -21,38 +24,40 @@ const PenyelesaianRow = ({ kegiatan }) => {
                 Swal.fire('Berhasil!', 'File Berita Acara berhasil diunggah.', 'success');
             },
             onError: (err) => {
-                 Swal.fire('Gagal!', err.file_berita_acara || 'Terjadi kesalahan saat mengunggah file.', 'error');
+                const errorMessages = Object.values(err).flat().join('<br/>');
+                Swal.fire('Gagal!', `Terjadi kesalahan:<br/><br/>${errorMessages}`, 'error');
             }
         });
     }
 
+    // Menangani pengiriman form untuk status akhir
     function handleStatusSubmit(e) {
         e.preventDefault();
         patchStatus(route('pegawai.kegiatan.updateStatus', kegiatan.id), {
             preserveScroll: true,
             onSuccess: () => {
                 Swal.fire('Berhasil!', 'Status kegiatan berhasil diperbarui.', 'success').then(() => {
-                    // --- PERMINTAAN BARU: Pindah ke tab 'selesai' ---
+                    // Redirect ke tab 'selesai' setelah status berhasil diperbarui
                     router.get(route('pegawai.kegiatan.myIndex', { tahapan: 'selesai' }));
                 });
             }
         });
     }
 
+    // Cek apakah Berita Acara sudah ada
     const hasBeritaAcara = !!kegiatan.berita_acara;
 
     return (
         <tr className="bg-white border-b">
             <td className="px-4 py-2 align-middle">{kegiatan.nama_kegiatan}</td>
-            
-            {/* Kolom Berita Acara (Baru) */}
+
+            {/* Kolom Berita Acara */}
             <td className="px-4 py-2 align-middle">
-                {/* --- PERMINTAAN BARU: Logika untuk menyembunyikan form --- */}
                 {hasBeritaAcara ? (
-                    <a 
-                        href={kegiatan.berita_acara.file_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer" 
+                    <a
+                        href={kegiatan.berita_acara.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="text-sm font-medium text-blue-600 hover:underline"
                     >
                         Lihat Berita Acara
@@ -70,14 +75,15 @@ const PenyelesaianRow = ({ kegiatan }) => {
                         </button>
                     </form>
                 )}
-                 {baErrors.file_berita_acara && <p className="text-red-500 text-xs mt-1">{baErrors.file_berita_acara}</p>}
+                {baErrors.file_berita_acara && <p className="text-red-500 text-xs mt-1">{baErrors.file_berita_acara}</p>}
             </td>
 
+            {/* Kolom Tanggal Kegiatan */}
             <td className="px-4 py-2 align-middle">{kegiatan.tanggal_kegiatan}</td>
 
-            {/* Kolom Aksi (Diubah) */}
+            {/* Kolom Status Akhir */}
             <td className="px-4 py-2 text-center align-middle">
-                 <form onSubmit={handleStatusSubmit} className="flex items-center justify-center gap-2">
+                <form onSubmit={handleStatusSubmit} className="flex items-center justify-center gap-2">
                     <select
                         value={statusData.status_akhir}
                         onChange={(e) => setStatusData('status_akhir', e.target.value)}
@@ -91,13 +97,12 @@ const PenyelesaianRow = ({ kegiatan }) => {
                     <button type="submit" disabled={!hasBeritaAcara || processingStatus} className="bg-green-500 text-white px-3 py-1.5 rounded text-xs hover:bg-green-600 disabled:bg-gray-400">
                         Simpan
                     </button>
-                 </form>
-                 {statusErrors.status_akhir && <p className="text-red-500 text-xs mt-1">{statusErrors.status_akhir}</p>}
+                </form>
+                {statusErrors.status_akhir && <p className="text-red-500 text-xs mt-1">{statusErrors.status_akhir}</p>}
             </td>
         </tr>
     );
 };
-
 
 export default function PenyelesaianView({ kegiatans }) {
     return (

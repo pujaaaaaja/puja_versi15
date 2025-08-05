@@ -53,7 +53,7 @@ export default function Show({ auth, kegiatan }) {
                             <DetailSection title="Informasi Umum Kegiatan">
                                 <DetailRow label="Nama Kegiatan" value={data.nama_kegiatan} />
                                 <DetailRow label="Deskripsi" value={data.ket_kegiatan} />
-                                <DetailRow label="Tanggal Kegiatan" value={data.tanggal_kegiatan} />
+                                <DetailRow label="Tanggal Kegiatan" value={new Date(data.tanggal_kegiatan).toLocaleDateString("id-ID")} />
                                 <DetailRow label="Tim Pelaksana" value={data.tim.nama_tim} />
                                 <DetailRow label="Anggota Tim" value={data.tim.users.map(p => p.name).join(', ')} />
                                 <DetailRow label="File SKTL Observasi" isFile={true} fileUrl={data.sktl_url} />
@@ -72,30 +72,41 @@ export default function Show({ auth, kegiatan }) {
                                 <DetailSection title="Dokumentasi Observasi">
                                     <DetailRow label="Judul Dokumentasi" value={dokObservasi.nama_dokumentasi} />
                                     <DetailRow label="Deskripsi/Catatan" value={dokObservasi.deskripsi} />
-                                    <div className="py-2">
-                                        <p className="font-medium text-gray-600 mb-2">Foto-foto Observasi:</p>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            {dokObservasi.fotos.map(foto => (
-                                                <a key={foto.id} href={foto.file_path} target="_blank" rel="noopener noreferrer">
-                                                    <img src={foto.file_path} alt="Dokumentasi" className="rounded-lg shadow-md object-cover h-40 w-full"/>
-                                                </a>
-                                            ))}
+                                    {dokObservasi.fotos.length > 0 && (
+                                        <div className="py-2">
+                                            <p className="font-medium text-gray-600 mb-2">Foto-foto Observasi:</p>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                {dokObservasi.fotos.map(foto => (
+                                                    <a key={foto.id} href={foto.file_path} target="_blank" rel="noopener noreferrer">
+                                                        <img src={foto.file_path} alt="Dokumentasi Observasi" className="rounded-lg shadow-md object-cover h-40 w-full"/>
+                                                    </a>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </DetailSection>
                             )}
 
                              {dokPenyerahan && (
                                 <DetailSection title="Dokumentasi Penyerahan">
                                     <DetailRow label="Judul Dokumentasi" value={dokPenyerahan.nama_dokumentasi} />
+                                    <DetailRow label="Deskripsi/Catatan" value={dokPenyerahan.deskripsi} />
                                     <DetailRow label="File SKTL Penyerahan" isFile={true} fileUrl={data.sktl_penyerahan_path} />
-                                    {/* PERBAIKAN KUNCI DI SINI:
-                                        - Kita cek apakah `data.kontrak` ada.
-                                        - Jika ada, kita tampilkan baris detailnya.
-                                        - Kita akses file pathnya melalui `data.kontrak.file_path`, bukan `dokPenyerahan.kontraks[0]`.
-                                    */}
                                     {data.kontrak && (
                                         <DetailRow label="Kontrak Pihak Ketiga" isFile={true} fileUrl={data.kontrak.file_path} />
+                                    )}
+                                    {/* PERBAIKAN: Tambahkan galeri foto untuk tahap penyerahan */}
+                                    {dokPenyerahan.fotos.length > 0 && (
+                                        <div className="py-2">
+                                            <p className="font-medium text-gray-600 mb-2">Foto-foto Penyerahan:</p>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                                {dokPenyerahan.fotos.map(foto => (
+                                                    <a key={foto.id} href={foto.file_path} target="_blank" rel="noopener noreferrer">
+                                                        <img src={foto.file_path} alt="Dokumentasi Penyerahan" className="rounded-lg shadow-md object-cover h-40 w-full"/>
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
                                     )}
                                 </DetailSection>
                             )}
@@ -103,6 +114,7 @@ export default function Show({ auth, kegiatan }) {
                              {beritaAcara && (
                                 <DetailSection title="Laporan Akhir (Penyelesaian)">
                                     <DetailRow label="Status Akhir" value={data.status_akhir} />
+                                    {/* `updated_at` sekarang akan memiliki nilai yang valid */}
                                     <DetailRow label="Tanggal Selesai" value={new Date(data.updated_at).toLocaleDateString("id-ID")} />
                                     <DetailRow label="File Berita Acara" isFile={true} fileUrl={beritaAcara.file_url} />
                                 </DetailSection>

@@ -4,6 +4,7 @@ import Dialog from '@/Components/Dialog';
 import PrimaryButton from '@/Components/PrimaryButton';
 import SecondaryButton from '@/Components/SecondaryButton';
 import InputError from '@/Components/InputError';
+import InputLabel from '@/Components/InputLabel'; // Tambahkan InputLabel
 import Swal from 'sweetalert2';
 import TextInput from '@/Components/TextInput';
 
@@ -16,8 +17,9 @@ export default function DokumentasiPenyerahanView({ kegiatans }) {
     const [selectedKegiatan, setSelectedKegiatan] = useState(null);
 
     // Form untuk DOKUMENTASI PENYERAHAN
+    // PERBAIKAN: Mengubah 'judul' menjadi 'nama_dokumentasi' agar sesuai dengan validasi backend
     const penyerahanForm = useForm({
-        judul: '',
+        nama_dokumentasi: '',
         fotos: [], // Izinkan multiple files
     });
 
@@ -56,13 +58,13 @@ export default function DokumentasiPenyerahanView({ kegiatans }) {
                 Swal.fire('Berhasil!', 'Dokumentasi penyerahan berhasil disimpan.', 'success');
             },
             onError: (err) => {
-                const errorMessages = Object.values(err).join('<br/>');
+                const errorMessages = Object.values(err).flat().join('<br/>');
                 Swal.fire('Gagal!', `Terjadi kesalahan:<br/><br/>${errorMessages}`, 'error');
             },
             preserveScroll: true,
         });
     };
-    
+
     // Handler untuk form FILE PIHAK KETIGA
     const handlePihakKetigaSubmit = (e) => {
         e.preventDefault();
@@ -74,13 +76,12 @@ export default function DokumentasiPenyerahanView({ kegiatans }) {
                 Swal.fire('Berhasil!', 'File dari pihak ketiga berhasil diunggah.', 'success');
             },
             onError: (err) => {
-                const errorMessages = Object.values(err).join('<br/>');
+                const errorMessages = Object.values(err).flat().join('<br/>');
                 Swal.fire('Gagal!', `Terjadi kesalahan:<br/><br/>${errorMessages}`, 'error');
             },
             preserveScroll: true,
         });
     };
-
 
     return (
         <>
@@ -122,17 +123,14 @@ export default function DokumentasiPenyerahanView({ kegiatans }) {
                                         )}
                                     </td>
                                     <td className="px-4 py-2 text-center">
-                                        {/* --- PERBAIKAN LOGIKA DI SINI --- */}
                                         {dokPenyerahan ? (
-                                            // Jika sudah diisi, arahkan ke halaman penyelesaian, BUKAN arsip
-                                            <Link 
-                                                href={route('pegawai.kegiatan.myIndex', { tahapan: 'penyelesaian' })} 
+                                            <Link
+                                                href={route('pegawai.kegiatan.myIndex', { tahapan: 'penyelesaian' })}
                                                 className="font-medium text-white bg-green-500 hover:bg-green-600 py-2 px-4 rounded-lg text-nowrap"
                                             >
                                                 Lanjutkan Penyelesaian
                                             </Link>
                                         ) : (
-                                            // Jika belum, buka modal untuk mengisi
                                             <button onClick={() => openModal('penyerahan', kegiatan)} className="font-medium text-white bg-purple-500 hover:bg-purple-600 py-2 px-4 rounded-lg text-nowrap">
                                                 Lakukan Penyerahan
                                             </button>
@@ -162,24 +160,20 @@ export default function DokumentasiPenyerahanView({ kegiatans }) {
                     </p>
 
                     <div className="mt-6">
-                        <label htmlFor="judul" className="block text-sm font-medium text-gray-700">
-                            Judul Dokumentasi
-                        </label>
+                        <InputLabel htmlFor="nama_dokumentasi" value="Judul Dokumentasi" />
                         <TextInput
-                            id="judul"
-                            name="judul"
-                            value={penyerahanForm.data.judul}
+                            id="nama_dokumentasi"
+                            name="nama_dokumentasi"
+                            value={penyerahanForm.data.nama_dokumentasi}
                             className="mt-1 block w-full"
-                            onChange={(e) => penyerahanForm.setData('judul', e.target.value)}
+                            onChange={(e) => penyerahanForm.setData('nama_dokumentasi', e.target.value)}
                             required
                         />
-                        <InputError message={penyerahanForm.errors.judul} className="mt-2" />
+                        <InputError message={penyerahanForm.errors.nama_dokumentasi} className="mt-2" />
                     </div>
 
                     <div className="mt-4">
-                        <label htmlFor="fotos" className="block text-sm font-medium text-gray-700">
-                            Unggah Foto Bukti (Bisa lebih dari satu)
-                        </label>
+                        <InputLabel htmlFor="fotos" value="Unggah Foto Bukti (Bisa lebih dari satu)" />
                         <input
                             id="fotos"
                             type="file"
@@ -206,7 +200,7 @@ export default function DokumentasiPenyerahanView({ kegiatans }) {
 
             {/* Dialog Box untuk UPLOAD FILE PIHAK KETIGA (sudah ada sebelumnya) */}
             <Dialog show={modalState.isPihakKetigaOpen} onClose={closeModal}>
-                 <form onSubmit={handlePihakKetigaSubmit} className="p-6">
+                <form onSubmit={handlePihakKetigaSubmit} className="p-6">
                     <h2 className="text-lg font-medium text-gray-900">
                         Unggah Dokumen Pihak Ketiga
                     </h2>
@@ -215,9 +209,7 @@ export default function DokumentasiPenyerahanView({ kegiatans }) {
                     </p>
 
                     <div className="mt-6">
-                        <label htmlFor="file_pihak_ketiga" className="block text-sm font-medium text-gray-700">
-                            Pilih File (PDF)
-                        </label>
+                        <InputLabel htmlFor="file_pihak_ketiga" value="Pilih File (PDF)" />
                         <input
                             id="file_pihak_ketiga"
                             type="file"

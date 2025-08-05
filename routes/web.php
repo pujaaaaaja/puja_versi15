@@ -73,6 +73,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/{kegiatan}/berita-acara', [PegawaiController::class, 'storeBeritaAcara'])->name('storeBeritaAcara');
         Route::patch('/{kegiatan}/status-akhir', [PegawaiController::class, 'updateStatusAkhir'])->name('updateStatus');
         Route::post('/{kegiatan}/upload-pihak-ketiga', [PegawaiController::class, 'uploadPihakKetiga'])->name('uploadPihakKetiga');
+        Route::post('/pegawai/kegiatan/{kegiatan}/store-berita-acara', [PegawaiController::class, 'storeBeritaAcara'])->name('pegawai.kegiatan.storeBeritaAcara');
     });
 
     // --- Rute KHUSUS Admin ---
