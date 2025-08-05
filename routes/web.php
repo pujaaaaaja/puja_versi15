@@ -69,7 +69,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/{kegiatan}/konfirmasi-kehadiran', [PegawaiController::class, 'konfirmasiKehadiran'])->name('confirmKehadiran');
         Route::post('/{kegiatan}/observasi', [PegawaiController::class, 'storeObservasi'])->name('storeObservasi');
         Route::post('/{kegiatan}/penyerahan', [PegawaiController::class, 'storePenyerahan'])->name('storePenyerahan');
-        Route::post('/{kegiatan}/selesaikan', [PegawaiController::class, 'selesaikanKegiatan'])->name('selesaikan');
+        //Route::post('/{kegiatan}/selesaikan', [PegawaiController::class, 'selesaikanKegiatan'])->name('selesaikan');
+        Route::post('/{kegiatan}/berita-acara', [PegawaiController::class, 'storeBeritaAcara'])->name('storeBeritaAcara');
+        Route::patch('/{kegiatan}/status-akhir', [PegawaiController::class, 'updateStatusAkhir'])->name('updateStatus');
         Route::post('/{kegiatan}/upload-pihak-ketiga', [PegawaiController::class, 'uploadPihakKetiga'])->name('uploadPihakKetiga');
     });
 

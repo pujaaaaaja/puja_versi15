@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 class BeritaAcaraResource extends JsonResource
 {
@@ -24,6 +25,7 @@ class BeritaAcaraResource extends JsonResource
             'satuan' => $this->satuan,
             'kedalaman' => $this->kedalaman,
             'dokumentasi_kegiatan_id' => $this->dokumentasi_kegiatan_id,
+            'file_url' => $this->file_path ? Storage::url($this->file_path) : null,
         ];
     }
 }

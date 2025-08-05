@@ -28,18 +28,17 @@ class ArsipController extends Controller
      *
      * @param \App\Models\Kegiatan $kegiatan
      * @return \Inertia\Response
-     */
+        */
     public function show(Kegiatan $kegiatan)
     {
-        // Eager load semua relasi yang dibutuhkan untuk halaman detail
         $kegiatan->load([
-            'proposal.user', // Muat proposal beserta data pengusulnya
-            'tim.pegawai',   // Muat tim beserta data para pegawainya
-            'dokumentasiKegiatans' => function ($query) {
-                // Muat semua dokumentasi beserta relasi spesifiknya
-                $query->with(['user', 'fotos', 'kontraks']);
+            'proposal.pengusul',
+            'tim.users',
+            'createdBy',
+            'dokumentasi' => function ($query) { // BENAR
+                $query->with(['fotos', 'kontraks', 'kebutuhans']);
             },
-            'beritaAcaras.user' // Muat berita acara beserta data pengunggahnya
+            'beritaAcara'
         ]);
 
         return Inertia::render('Arsip/Show', [

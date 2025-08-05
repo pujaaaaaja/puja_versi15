@@ -10,6 +10,7 @@ use Inertia\Inertia;
 use App\Http\Requests\StoreBeritaAcaraRequest;
 use App\Http\Requests\StoreDokumentasiWithFilesRequest;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class PegawaiController extends Controller
 {
@@ -19,7 +20,7 @@ class PegawaiController extends Controller
     public function myIndex(Request $request)
     {
         $user = Auth::user();
-        $query = Kegiatan::with(['tim.users', 'proposal'])
+        $query = Kegiatan::with(['tim.users', 'proposal', 'beritaAcara']) // <-- PERBAIKAN
             ->whereHas('tim.users', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
@@ -98,7 +99,7 @@ class PegawaiController extends Controller
 
     // Buat dokumentasi kegiatan
     $dokumentasi = $kegiatan->dokumentasi()->create([
-        'judul' => $validated['judul'],
+        'nama_dokumentasi' => $validated['judul'],
         'tipe' => 'penyerahan', // Tandai sebagai dokumentasi penyerahan
     ]);
 
@@ -106,7 +107,8 @@ class PegawaiController extends Controller
     if ($request->hasFile('fotos')) {
         foreach ($request->file('fotos') as $file) {
             $path = $file->store('dokumentasi_foto', 'public');
-            $dokumentasi->fotos()->create(['path' => $path]);
+            // Sesuaikan nama kolom dengan yang ada di tabel 'fotos'
+            $dokumentasi->fotos()->create(['file_path' => $path]); // BENAR
         }
     }
 
@@ -121,22 +123,44 @@ class PegawaiController extends Controller
     /**
      * Menyelesaikan kegiatan dan menyimpan berita acara.
      */
-    public function selesaikanKegiatan(StoreBeritaAcaraRequest $request, Kegiatan $kegiatan)
+    public function storeBeritaAcara(Request $request, Kegiatan $kegiatan)
     {
-        $data = $request->validated();
-        
-        if ($request->hasFile('file_berita_acara')) {
-            $data['file_berita_acara'] = $request->file('file_berita_acara')->store('berita_acara', 'public');
-        }
-
-        $kegiatan->beritaAcara()->create($data);
-        
-        $kegiatan->update([
-            'tahapan' => TahapanKegiatan::SELESAI,
-            'status_akhir' => $data['status_akhir'],
+        $validated = $request->validate([
+            'file_berita_acara' => 'required|file|mimes:pdf,doc,docx|max:2048',
         ]);
 
-        return to_route('pegawai.kegiatan.myIndex')->with('success', 'Kegiatan telah berhasil diselesaikan.');
+        // Hapus berita acara lama jika ada
+        if ($kegiatan->beritaAcara) {
+            Storage::disk('public')->delete($kegiatan->beritaAcara->file_path);
+            $kegiatan->beritaAcara->delete();
+        }
+
+        $filePath = $request->file('file_berita_acara')->store('berita_acara', 'public');
+
+        $kegiatan->beritaAcara()->create([
+            'nama_berita_acara' => 'Berita Acara - ' . $kegiatan->nama_kegiatan,
+            'file_path' => $filePath,
+        ]);
+
+        return redirect()->back()->with('success', 'Berita Acara berhasil diunggah.');
+    }
+    public function updateStatusAkhir(Request $request, Kegiatan $kegiatan)
+    {
+        // Pastikan Berita Acara sudah ada sebelum mengubah status
+        if (!$kegiatan->beritaAcara) {
+            return redirect()->back()->withErrors(['status_akhir' => 'Harap unggah Berita Acara terlebih dahulu.']);
+        }
+
+        $validated = $request->validate([
+            'status_akhir' => ['required', Rule::in(['Selesai', 'Ditunda', 'Dibatalkan'])],
+        ]);
+
+        $kegiatan->update([
+            'status_akhir' => $validated['status_akhir'],
+            'tahapan' => TahapanKegiatan::SELESAI,
+        ]);
+
+        return redirect()->back()->with('success', 'Status kegiatan telah diselesaikan.');
     }
     public function uploadPihakKetiga(Request $request, Kegiatan $kegiatan)
     {
