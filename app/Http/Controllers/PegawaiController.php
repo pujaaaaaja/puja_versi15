@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use App\Http\Requests\StoreBeritaAcaraRequest;
 use App\Http\Requests\StoreDokumentasiWithFilesRequest;
+use App\Http\Resources\KegiatanResource;
 
 class PegawaiController extends Controller
 {
@@ -22,20 +23,23 @@ class PegawaiController extends Controller
     public function myIndex(Request $request)
     {
         $user = Auth::user();
-        $query = Kegiatan::with(['tim.users', 'proposal', 'dokumentasi', 'beritaAcara', 'kontrak'])
+        $query = Kegiatan::with(['tim.users', 'proposal']) // Disederhanakan untuk debugging
             ->whereHas('tim.users', function ($q) use ($user) {
                 $q->where('user_id', $user->id);
             });
 
-        // Logika sorting dan filtering yang sudah ada
-        $sortField = $request->get('sort_field', 'created_at');
-        $sortDirection = $request->get('sort_direction', 'desc');
-
-        if ($request->has('nama_kegiatan')) {
-            $query->where('nama_kegiatan', 'like', '%' . $request->get('nama_kegiatan') . '%');
+        $tahapan = $request->query('tahapan');
+        if ($tahapan && $tahapan !== 'semua') {
+            $query->where('tahapan', $tahapan);
+        } else {
+            $query->where('tahapan', '!=', 'selesai');
         }
+        
+        $kegiatans = $query->orderBy('created_at', 'desc')->paginate(10);
 
-        $kegiatans = $query->orderBy($sortField, $sortDirection)->paginate(10)->onEachSide(1);
+        // --- BARIS INI UNTUK DEBUGGING ---
+        // Ini akan menghentikan eksekusi dan menampilkan isi dari $kegiatans
+        // dd($kegiatans->toArray());
 
         return Inertia::render('Pegawai/KegiatanSaya', [
             'kegiatans' => $kegiatans,
@@ -43,7 +47,6 @@ class PegawaiController extends Controller
             'success' => session('success'),
         ]);
     }
-
     /**
      * Menangani konfirmasi kehadiran pegawai.
      * Menggabungkan logika dari DokumentasiKegiatanController::confirmKehadiran().

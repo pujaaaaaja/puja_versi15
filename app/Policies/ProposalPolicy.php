@@ -84,6 +84,6 @@ class ProposalPolicy
     }
     public function viewApproved(User $user): bool
     {
-        return $user->hasRole('kabid') || $user->hasRole('admin');
+        return $user->hasRole('kabid') || $user->hasRole('kadis');
     }
 }
