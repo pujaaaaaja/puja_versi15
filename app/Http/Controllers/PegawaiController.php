@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use App\Http\Requests\StoreBeritaAcaraRequest;
 use App\Http\Requests\StoreDokumentasiWithFilesRequest;
+use Illuminate\Support\Facades\Storage;
 
 class PegawaiController extends Controller
 {
@@ -86,32 +87,36 @@ class PegawaiController extends Controller
     /**
      * Menyimpan dokumentasi penyerahan.
      */
-    public function storePenyerahan(StoreDokumentasiWithFilesRequest $request, Kegiatan $kegiatan)
-    {
-        $validated = $request->validated();
+    public function storePenyerahan(Request $request, Kegiatan $kegiatan)
+{
+    // Pastikan validasinya sesuai dengan form baru
+    $validated = $request->validate([
+        'judul' => 'required|string|max:255',
+        'fotos' => 'required|array', // Validasi bahwa 'fotos' adalah array
+        'fotos.*' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048' // Validasi setiap item di dalam array
+    ]);
 
-        $dokumentasiData = [
-            'nama_dokumentasi' => $validated['nama_dokumentasi'],
-            'deskripsi' => $validated['deskripsi'],
-            'tipe' => 'penyerahan',
-        ];
+    // Buat dokumentasi kegiatan
+    $dokumentasi = $kegiatan->dokumentasi()->create([
+        'judul' => $validated['judul'],
+        'tipe' => 'penyerahan', // Tandai sebagai dokumentasi penyerahan
+    ]);
 
-        $dokumentasi = $kegiatan->dokumentasi()->create($dokumentasiData);
-
-        if ($request->hasFile('fotos')) {
-             foreach ($request->file('fotos') as $file) {
-                $path = $file->store('dokumentasi/fotos', 'public');
-                // PERBAIKAN: Menggunakan nama kolom yang benar 'file_path'
-                $dokumentasi->fotos()->create(['file_path' => $path]);
-            }
+    // Simpan setiap foto yang diunggah
+    if ($request->hasFile('fotos')) {
+        foreach ($request->file('fotos') as $file) {
+            $path = $file->store('dokumentasi_foto', 'public');
+            $dokumentasi->fotos()->create(['path' => $path]);
         }
-
-        $kegiatan->update([
-            'tahapan' => TahapanKegiatan::PENYELESAIAN,
-        ]);
-
-        return to_route('pegawai.kegiatan.myIndex')->with('success', 'Dokumentasi penyerahan berhasil diunggah.');
     }
+
+    // Setelah dokumentasi disimpan, lanjutkan tahapan kegiatan
+    $kegiatan->update([
+        'tahapan' => TahapanKegiatan::PENYELESAIAN, // atau tahapan selanjutnya
+    ]);
+
+    return redirect()->back()->with('success', 'Dokumentasi penyerahan berhasil disimpan.');
+}
 
     /**
      * Menyelesaikan kegiatan dan menyimpan berita acara.
@@ -132,5 +137,26 @@ class PegawaiController extends Controller
         ]);
 
         return to_route('pegawai.kegiatan.myIndex')->with('success', 'Kegiatan telah berhasil diselesaikan.');
+    }
+    public function uploadPihakKetiga(Request $request, Kegiatan $kegiatan)
+    {
+    $validated = $request->validate([
+        'file_pihak_ketiga' => 'required|file|mimes:pdf',
+    ]);
+
+        // Hapus file lama jika ada
+        if ($kegiatan->file_pihak_ketiga_path && Storage::disk('public')->exists($kegiatan->file_pihak_ketiga_path)) {
+            Storage::disk('public')->delete($kegiatan->file_pihak_ketiga_path);
+        }
+
+        // Simpan file baru dan dapatkan path-nya
+        $filePath = $request->file('file_pihak_ketiga')->store('dokumen_pihak_ketiga', 'public');
+
+        // Update path di database
+        $kegiatan->update([
+            'file_pihak_ketiga_path' => $filePath,
+        ]);
+
+        return redirect()->back()->with('success', 'File pihak ketiga berhasil diunggah.');
     }
 }

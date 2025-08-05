@@ -68,9 +68,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [PegawaiController::class, 'myIndex'])->name('myIndex');
         Route::post('/{kegiatan}/konfirmasi-kehadiran', [PegawaiController::class, 'konfirmasiKehadiran'])->name('confirmKehadiran');
         Route::post('/{kegiatan}/observasi', [PegawaiController::class, 'storeObservasi'])->name('storeObservasi');
-        
         Route::post('/{kegiatan}/penyerahan', [PegawaiController::class, 'storePenyerahan'])->name('storePenyerahan');
         Route::post('/{kegiatan}/selesaikan', [PegawaiController::class, 'selesaikanKegiatan'])->name('selesaikan');
+        Route::post('/{kegiatan}/upload-pihak-ketiga', [PegawaiController::class, 'uploadPihakKetiga'])->name('uploadPihakKetiga');
     });
 
     // --- Rute KHUSUS Admin ---
